@@ -1,18 +1,7 @@
-Creep.prototype.harv = function (source) {
-  let result = this.harvest(source);
-  if (result == ERR_NOT_IN_RANGE){
-    this.moveTo(source);
-  }
-  else if (result !== 0 && result !== ERR_BUSY){
-    return result;
-  }
-};
-
-
 Creep.prototype.upgr = function(controller){
-  let result = this.upgradeController()(source);
+  let result = this.upgradeController(controller);
   if (result == ERR_NOT_IN_RANGE){
-    this.moveTo(source);
+    this.moveTo(controller);
   }
   else if (result !== 0 && result !== ERR_BUSY){
     return result;

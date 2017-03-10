@@ -1,7 +1,14 @@
-import os, shutil
+import os, shutil, socket
+
+hostname = socket.gethostname()
+folder = ''
+if hostname == 'ET-PC':
+    folder = 'C:/Users/Grant/AppData/Local/Screeps/scripts/127_0_0_1___21025/default'
+if hostname == 'SurfacePC':
+    folder = 'C:/Users/Grant/AppData/Local/Screeps/scripts/127_0_0_1___21025/default'
+
 
 # Empty the deployment directory
-folder = 'C:/Users/Grant/AppData/Local/Screeps/scripts/127_0_0_1___21025/default'
 for the_file in os.listdir(folder):
     file_path = os.path.join(folder, the_file)
     try:
