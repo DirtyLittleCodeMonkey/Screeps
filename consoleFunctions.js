@@ -1,16 +1,46 @@
-function addRoom(roomName){
-  Memory.Empire.rooms[roomName] = {id:roomName, scouted:false, sources: []};
-}
+global.STRUCTURES_ALL = _.reduce( global, ( a, v, k, c ) => { if ( k.startsWith( 'STRUCTURE_' ) ) { a.push( v ); } return a; }, [] );
 
-function resetMemory(){
+resetMemory = function(){
   Memory.Empire = {};
   Memory.Empire.rooms = {};
   Memory.Empire.bases = {};
-  Memory.Empire.bases.creeps = {};
+  // Make base entries for each room under our control
+  controlledRooms = [];
+  for (let i in Game.spawns){
+    let room = Game.spawns[i].pos.roomName;
+    if (controlledRooms.indexOf(room) < 0){
+      controlledRooms.push(room);
+    }
+  }
+  for (i in controlledRooms){
+    addBase(controlledRooms[i]);
+  }
+}
+
+addBase = function(roomName){
+  let newBase = {
+    mainRoom: roomName,
+    rooms: [roomName],
+    structures: addBaseHelpers.makeStructures(),
+    creeps: {},
+    sources: [],
+  }
+  Memory.Empire.bases[roomName] = newBase;
+}
+
+addBaseHelpers = {
+  makeStructures: function(){
+    structures = {};
+    for (i in STRUCTURES_ALL){
+      structures[STRUCTURES_ALL[i]] = [];
+    }
+
+    return structures;
+  },
 }
 
 
-function calcBodyCost(body){
+calcBodyCost = function(body){
   //_.sum(body, p => BODYPART_COST[p])
   const costs = {
     MOVE: 50,

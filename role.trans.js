@@ -1,6 +1,6 @@
 module.exports = {
 
-  run = function(creep){
+  run: function(creep){
 
     if (creep.memory.delivering == undefined){
       creep.memory.delivering = false;
@@ -31,7 +31,7 @@ module.exports = {
 
   },
 
-  findOnGround = function(creep){
+  findOnGround: function(creep){
     let base = Memory.Empire.bases[creep.memory.baseNum];
     groundRescources = [];
     for (let i in base.rooms){
@@ -44,13 +44,13 @@ module.exports = {
     return groundRescources;
   },
 
-  getFromGround = function(creep, target){
+  getFromGround: function(creep, target){
     if (creep.pickup(target) == ERR_NOT_IN_RANGE){
       creep.moveTo(target);
     }
   },
 
-  getFromContainer = function(creep, target){
-    if (creep.withdraw(target, ))
-  }
+  // getFromContainer = function(creep, target){
+  //   if (creep.withdraw(target, ))
+  // }
 };

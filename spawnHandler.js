@@ -29,7 +29,7 @@ module.exports = {
       }
       harvBody.concat(harvAddition);
     }
-    spawn.createCreep(harvBody, undefined, [role: 'harv', baseNum: base.baseNum]);
+    spawn.createCreep(harvBody, undefined, {role: 'harv', baseNum: base.baseNum});
   },
 
 };

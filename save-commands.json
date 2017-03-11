@@ -1,0 +1,5 @@
+{
+    "commands": [
+      "*.js : python LocalDeploy.py"
+    ]
+}

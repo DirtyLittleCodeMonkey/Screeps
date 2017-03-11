@@ -1,6 +1,6 @@
 module.exports = {
 
-  run = function(creep){
+  run: function(creep){
     let source = Game.getObjectById(creep.memory.source);
     // If source does not exist, throw error in console and break
     if (source == undefined){
