@@ -2,63 +2,71 @@ module.exports = {
 
   run: function(creep){
     let source = Game.getObjectById(creep.memory.source);
-    // If source does not exist, throw error in console and break
+    let base = Memory.Empire.bases[creep.memory.base];
+
+    //Move to the source
     if (source == undefined){
-      console.log('<style clolor="red">HARV HAS NO SOURCE!</style> '+creep.name+' <a hfref="#!/room/'+creep.roomName+'">'+creep.roomName+'</a>');
-      return;
-    }
-    // If creep is not near source, move to source
-    if (!creep.isNearTo(source)){
-      creep.moveTo(source);
-      return;
-    }
-    if (Game.getObjectById(creep.memory.container) == undefined){
-      creep.memory.container == undefined;
-    }
-    // If the creep does not have a container in memory, look around for container
-    if (creep.memory.container == undefined){
-      let stuff = creep.lookAtArea(creep.pos.y - 1, creep.pos.x - 1, creep.pos.y + 1, creep.pos.x + 1);
-      for (let i in stuff){
-        if (stuff[i] instanceof StructureContainer){
-          creep.memory.container = stuff[i].id;
-          creep.memory.building = false;
-          return;
-        }
-        if (stuff[i] instanceof ConstructionSite){
-          creep.memory.container = stuff[i].id;
-          creep.memory.building = true;
+      for (let i in base.sources){
+        if (base.sources[i].id == creep.memory.source){
+          creep.findPath(base.sources[i].roomName);
           return;
         }
       }
-      // If there is no container near the creep, drop a construction site for one.
-      creep.createConstructionSite(creep.pos, STRUCTURE_CONTAINER);
     }
 
+    if (creep.pos.roomName == source.pos.roomName && isOnExit(creep.pos)){
+      creep.getOffExit();
+    }
+
+    if (creep.pos.isNearTo(source) == false){
+      creep.moveTo(source);
+      return
+    }
+
+    // Find the container next to the source
     let container = Game.getObjectById(creep.memory.container);
-    if (creep.memory.building == true){
-      if (creep.carry.energy == 0){
-        creep.harvest(source);
+    if (container == undefined){
+      let stuff = creep.room.lookAtArea(source.pos.y - 1, source.pos.x - 1, source.pos.y + 1, source.pos.x + 1, true);
+      for (let i in stuff){
+        if (stuff[i].type == 'structure' && stuff[i].structure.structureType == STRUCTURE_CONTAINER){
+          creep.memory.container = stuff[i].structure.id
+          for (let j in base.sources){
+            if (base.sources[j].id == creep.memory.source){
+              base.sources[j].container = stuff[i].structure.id;
+            }
+          }
+          return
+        }
+        if (stuff[i].type == 'constructionSite' && stuff[i].constructionSite.structureType == STRUCTURE_CONTAINER){
+          creep.memory.container = stuff[i].constructionSite.id
+          return
+        }
       }
-      else{
-        creep.build(container);
-      }
+      creep.room.createConstructionSite(creep.pos, STRUCTURE_CONTAINER)
+      return
     }
-    else if (creep.memory.reparing == true){
-      if (creep.carry.energy == 0){
-        creep.harvest(source);
-      }
-      else{
-        creep.repair(container);
-      }
-    }
-    else{
+
+    if (creep.carry.energy < creep.carryCapacity){
       creep.harvest(source);
-      if (container.hits < container.hitsMax * 0.25){
-        creep.memory.reparing = true;
+      return
+    }
+
+    // Build container
+    if (container instanceof ConstructionSite){
+      creep.build(container);
+      return
+    }
+
+    if (container.hits < container.hitsMax){
+      if (creep.repair(container) == ERR_NOT_IN_RANGE){
+        creep.moveTo(container);
       }
+    }
+
+    if (creep.transfer(container, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE){
+      creep.moveTo(container);
     }
 
   }
-
 
 };

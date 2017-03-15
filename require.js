@@ -1,2 +1,4 @@
 require('prototype.Creep');
-require('consoleFunctions');
+require('globalFunctions');
+require('roomVisuals');
+require('pathfinding');
