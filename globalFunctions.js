@@ -79,3 +79,9 @@ getIdList = function(objList){
 getBodyCost = function(body){
   return _.sum(body, p => BODYPART_COST[p])
 }
+
+// Mark a room for claiming
+settleRoom = function(baseRoom, targetRoom){
+  Memory.Empire.bases[baseRoom].settleRoom = targetRoom;
+  Memory.Empire.bases[baseRoom].helpRoom = targetRoom;
+}

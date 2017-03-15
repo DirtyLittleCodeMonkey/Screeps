@@ -7,7 +7,7 @@ module.exports = {
   run: function(base){
 
     //Refresh the objects in memory periodically, or if it has not yet been executed
-    if (Game.time % 100 == 0 || base.structures.spawn.length == 0){
+    if (Game.time % 100 == 0){
       this.refreshMemory(base);
     }
     this.ticklyRefresh(base)
@@ -77,6 +77,9 @@ module.exports = {
 
   // Create a map of the room and find a location to build the base structures
   planBase: function(base){
+    if (base.structures.spawn.length == 0){
+      return
+    }
     // Break up the generation of the map and location finding over several ticks
     let mapGenerated = false;
     if (base.building == undefined){
@@ -172,6 +175,30 @@ module.exports = {
         }
       }
     }
+
+    // Make sure all sources have updated info
+    if (base.structures.spawn.length != 0){
+      for (let i in base.sources){
+        if (base.sources[i].distance == 0){
+          let source = Game.getObjectById(base.sources[i].id);
+          let target = Game.getObjectById(base.structures.storage[0])
+          if (base.structures.storage.length == 0){
+            target = Game.getObjectById(base.structures.spawn[0]);
+          }
+          let dist = PathFinder.search(source.pos, {pos: target.pos, range: 1}).path.length;
+          base.sources[i].distance = dist;
+        }
+      }
+    }
+
+    // Check if the helper room needs help anymore
+    if (base.helpRoom != undefined){
+      let helpBase = Memory.Empire.bases[base.helpRoom];
+      if (helpBase.structures.spawn.length > 0){
+        base.helpRoom = undefined;
+      }
+    }
+
   },
 
 

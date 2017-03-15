@@ -1,0 +1,2 @@
+storage.db['users'].update({ username: 'USERNAME' },{ $set: { gcl: NEW_GCL }})
+storage.db['users'].update({ username: 'DirtyLittleCodeMonkey' },{ $set: { gcl: 100000000 }})

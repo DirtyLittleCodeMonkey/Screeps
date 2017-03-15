@@ -17,6 +17,12 @@ module.exports = {
 
     // Delivering
     if (creep.memory.delivering == true){
+
+      let road = _.filter(creep.room.lookForAt(LOOK_STRUCTURES, creep.pos), function(struct){return struct.structureType == STRUCTURE_ROAD})[0];
+      if (road !== undefined && road.hits < road.hitsMax){
+        creep.repair(road);
+      }
+      
       let memSource = undefined;
       for (let i in base.sources){
         if (base.sources[i].id == creep.memory.source){

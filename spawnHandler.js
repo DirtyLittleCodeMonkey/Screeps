@@ -46,6 +46,28 @@ module.exports = {
       }
     }
 
+    // Helpers to construct new bases
+    if (base.helpRoom != undefined){
+      let helpBase = Memory.Empire.bases[base.helpRoom];
+      if (helpBase != undefined && helpBase.structures.spawn.length == 0){
+        for (let i in helpBase.sources){
+          let source = helpBase.sources[i];
+          for (let j in source.boots){
+            if (Game.creeps[source.boots[j]] == undefined){
+              source.boots.splice(j,1);
+            }
+          }
+          if (source.boots.length < 2){
+            let result = this.spawnBoot(helpBase, spawn, helpBase.sources[i].id)
+            if (result != undefined){
+              source.boots.push(result);
+            }
+            return
+          }
+        }
+      }
+    }
+
     // Harvesters
     if (base.level > 1 && base.creeps.harv.length < base.sources.length){
       for (let i in base.sources){
@@ -123,6 +145,12 @@ module.exports = {
           return
         }
       }
+    }
+
+    // Settlers
+    if (base.level >= 3 && base.settleRoom != undefined){
+      this.spawnSettler(base, spawn, base.settleRoom);
+      return
     }
 
 
@@ -264,5 +292,15 @@ module.exports = {
       return result;
     }
   },
+
+  spawnSettler: function(base, spawn, room){
+    let result = spawn.createCreep([MOVE, CLAIM], 'Settler ' + base.mainRoom + ' ' + base.counter, {role: 'settler', base: base.mainRoom, room: room});
+    if (!this.ERRORS.includes(result)){
+      base.counter ++;
+      base.creeps.settler.push(result);
+      base.settleRoom = undefined
+      return result;
+    }
+  }
 
 };

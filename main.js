@@ -35,6 +35,21 @@ module.exports.loop = function(){
         initMemory();
       }
 
+      // Check if all owned rooms have a base
+      for (let i in Game.rooms){
+        if (Game.rooms[i].controller.my == true){
+          let hasBase = false
+          for (let j in Memory.Empire.bases){
+            if (i == j){
+              hasBase = true;
+            }
+          }
+          if (hasBase == false){
+            addBase(i);
+          }
+        }
+      }
+
       // Run creep roles
       for (let i in Game.creeps){
         try{
@@ -52,6 +67,10 @@ module.exports.loop = function(){
           }
 
           // Execute creep role
+          if (creep.memory.role == undefined){
+            creep.suicide()
+            console.log('ERROR CREEEP HAS RO ROLE ' + creep.name + ' ' + creep.room);
+          }
           roles[creep.memory.role].run(creep);
           if (base.creeps[creep.memory.role] == undefined){
             base.creeps[creep.memory.role] = [];

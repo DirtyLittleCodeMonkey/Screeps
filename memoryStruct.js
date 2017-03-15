@@ -24,7 +24,10 @@ addSource = function(baseName, sourceId){
   if (base.structures.storage.length == 0){
     target = Game.getObjectById(base.structures.spawn[0]);
   }
-  let dist = PathFinder.search(source.pos, {pos: target.pos, range: 1}).path.length;
+  let dist = 0;
+  if (target != undefined){
+    let dist = PathFinder.search(source.pos, {pos: target.pos, range: 1}).path.length;
+  }
   let newSource = new addBaseHelpers.Source(source.pos.roomName, sourceId, (dist*2)/5);
   base.sources.push(newSource);
 }
@@ -39,6 +42,7 @@ addRoom = function(baseName, roomName){
 
 // Adds a base entry to memory
 addBase = function(roomName){
+  // Create memory object containing basic fields
   Memory.Empire.bases[roomName] = {
     mainRoom: roomName,
     rooms: {},
@@ -46,15 +50,33 @@ addBase = function(roomName){
     sources: [],
     creeps: {},
   }
+  let base = Memory.Empire.bases[roomName];
+  // Fill structures and creeps categories with all needed fields
   for (let i in STRUCTURES_ALL){
-    Memory.Empire.bases[roomName].structures[STRUCTURES_ALL[i]] = [];
+  base.structures[STRUCTURES_ALL[i]] = [];
   }
   const roles = require('roles');
   for (let i in roles){
-    Memory.Empire.bases[roomName].creeps[i] = [];
+    base.creeps[i] = [];
   }
+  // Add the main room to the base
   addRoom(roomName, roomName);
-  Memory.Empire.bases[roomName].rooms[roomName].scouted = false;
+  // Mark the main room scouted and add sources to the list
+  base.rooms[roomName].scouted = true;
+  let controller = Game.rooms[roomName].controller;
+  newSources = controller.room.find(FIND_SOURCES);
+  for (let i in newSources){
+    let exists = false
+    for (let j in base.sources){
+      if (base.sources[j].id == newSources[i].id){
+        exists = true;
+      }
+    }
+    if (exists == false){
+      addSource(roomName, newSources[i].id);
+    }
+  }
+
 }
 
 // Helper functions and classes for memory objects
