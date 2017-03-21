@@ -6,7 +6,11 @@ require('memoryStruct')
 global.STRUCTURES_ALL = _.reduce( global, ( a, v, k, c ) => { if ( k.startsWith( 'STRUCTURE_' ) ) { a.push( v ); } return a; }, [] );
 
 // List of room energy totals that correspond to room levels
-global.ROOM_LEVELS = [300, 550, 800, 1300, 1800, 2300, 3100, 10900],
+global.ROOM_LEVELS = [300, 550, 800, 1300, 1800, 2300, 3100, 10900]
+
+// List of basic elements
+
+global.BASIC_MINERALS = ['O', 'X', 'H', 'L', 'U', 'K', 'Z']
 
 // Hard reset of memory, flags, and creeps. For testing purposes
 hardReset = function(){
@@ -23,12 +27,9 @@ hardReset = function(){
   }
 }
 
-memoryReset = function(){
-  for (let i in Memory){
-    if (i != 'creeps' && i != 'flags'){
-      delete(Memory[i]);
-    }
-  }
+toggleAutoBuild = function(baseName){
+  let base = Memory.Empire.bases[baseName];
+  base.building.automaticBuild = !base.building.automaticBuild;
 }
 
 resetCpuAverage = function(){
@@ -84,4 +85,8 @@ getBodyCost = function(body){
 settleRoom = function(baseRoom, targetRoom){
   Memory.Empire.bases[baseRoom].settleRoom = targetRoom;
   Memory.Empire.bases[baseRoom].helpRoom = targetRoom;
+}
+
+linkRoom = function(roomName){
+  return '<a href="#!/room/'+roomName+'">'+roomName+'</a>'
 }

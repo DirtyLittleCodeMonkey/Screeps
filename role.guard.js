@@ -3,7 +3,7 @@ module.exports = {
   run: function(creep){
 
     if (creep.pos.roomName != creep.memory.target){
-      creep.findPath(creep.memory.target);
+      creep.moveTo(Game.flags[creep.memory.target])
       return
     }
     if (isOnExit(creep.pos) == true){

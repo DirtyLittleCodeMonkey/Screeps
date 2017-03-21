@@ -96,6 +96,9 @@ RoomPosition.checkPath = function(path) {
   // Needs to return construction site ID
   for (let pth of path) {
     let newPos = RoomPosition.deserializePos(pth)
+    if (Game.rooms[newPos.roomName] == undefined){
+      return false;
+    }
     let stuff = newPos.look()
     if (_.indexOf(path, pth) != 0) {
       if (_.some(stuff, s => s.type == 'constructionSite' && s.constructionSite.structureType == STRUCTURE_ROAD)) {

@@ -3,17 +3,6 @@
 initMemory = function(){
   Memory.Empire = {};
   Memory.Empire.bases = {};
-  // Make base entries for each room under our control
-  controlledRooms = [];
-  for (let i in Game.spawns){
-    let room = Game.spawns[i].pos.roomName;
-    if (controlledRooms.indexOf(room) < 0){
-      controlledRooms.push(room);
-    }
-  }
-  for (i in controlledRooms){
-    addBase(controlledRooms[i]);
-  }
 }
 
 // Add source to a base
@@ -83,15 +72,15 @@ addBase = function(roomName){
 addBaseHelpers = {
 
   Source: class{
-    constructor(room, id, neededCARRY){
+    constructor(roomName, id, dist, neededCARRY){
       this.id = id;
-      this.roomName = room;
+      this.roomName = roomName;
       this.harv = '';
       this.boots = [];
       this.hauls = [];
       this.distance = 0;
       this.neededCARRY = neededCARRY;
-      this.roadBuilt = false;
+      this.isMineral = false;
     }
   }
 }

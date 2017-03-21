@@ -2,6 +2,79 @@ module.exports = {
 
   run: function(creep){
 
+    let base = Memory.Empire.bases[creep.memory.base];
+
+    // Set the state of the creep (delivering, building, etc)
+    this.setMemoryState(creep);
+
+    // Get energy
+    if (creep.memory.delivering == false){
+      this.getEnergy(creep)
+      return
+    }
+
+    // Reapir and build roads
+    if (creep.carry.energy > 0){
+      if (this.repairRoads(creep) == true){
+        return
+      }
+    }
+
+    // Get to the main room
+    if (creep.pos.roomName != base.mainRoom){
+      creep.moveTo(Game.flags[base.mainRoom]);
+      return
+    }
+
+    let target = Game.getObjectById(creep.memory.target);
+    // Find new target if DNE
+    if (target == undefined || target.energy == target.energyCapacity){
+      this.findDeliveryTarget(creep);
+      target = Game.getObjectById(creep.memory.target);
+    }
+
+    // If target has been found, deliver energy to it
+    if (target != undefined){
+      if (creep.transfer(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE){
+        creep.moveTo(target);
+      }
+      return
+    }
+
+    // If there are no extensions that need energy, build sites
+    if (base.structures.constructionSites.length > 0){
+      let sites = _.filter(getObjectList(base.structures.constructionSites), function(site){return site.roomName == creep.roomName && site.structureType == STRUCTURE_ROAD});
+      if (sites.length == 0){
+        creep.moveTo(Game.getObjectById(base.structures.constructionSites[0]));
+        return
+      }
+      else{
+        let nearest = creep.pos.findClosestByRange(sites);
+        if (creep.build(nearest) == ERR_NOT_IN_RANGE){
+          creep.moveTo(nearest);
+        }
+        return
+      }
+    }
+
+  },
+
+  findDeliveryTarget: function(creep){
+    let base = Memory.Empire.bases[creep.memory.base]
+    // Set empty target
+    creep.memory.target = undefined
+    if (base.structures.extensionsNeedEnergy.length == 0){
+      return
+    }
+
+    // Find closest delivery target
+    let extensions = getObjectList(base.structures.extensionsNeedEnergy)
+    let nearest = creep.pos.findClosestByRange(extensions);
+    creep.memory.target = nearest.id
+  },
+
+  // Set the memory state of the creep
+  setMemoryState: function(creep){
     if (creep.memory.delivering == undefined){
       creep.memory.delivering = false;
     }
@@ -12,88 +85,70 @@ module.exports = {
     else if (creep.carry.energy == creep.carryCapacity){
       creep.memory.delivering = true;
     }
+  },
 
+  // Find Energy
+  getEnergy: function(creep){
     let base = Memory.Empire.bases[creep.memory.base];
-
-    if (creep.memory.delivering == false){
-      let source = Game.getObjectById(creep.memory.source)
-      if (source == undefined){
+    let source = Game.getObjectById(creep.memory.source)
+    // If there is no vision on the source, look up the room it is in and move to the flag
+    if (source == undefined){
+      // if the creep does not know what room the source is in, find the room
+      if (creep.memory.sourceRoom == undefined){
         for (let i in base.sources){
           if (base.sources[i].id == creep.memory.source){
-            creep.findPath(base.sources[i].roomName);
-            return
+            creep.memory.sourceRoom = base.sources[i].roomName
+            break
           }
         }
       }
+      // Move to source room's flag
+      creep.moveTo(Game.flags[creep.memory.sourceRoom])
+      return
+    }
 
-      if (creep.pos.roomName == source.pos.roomName && isOnExit(creep.pos)){
-        creep.getOffExit();
-        return
-      }
-
-      let container = {};
+    let container = Game.getObjectById(creep.memory.container);
+    // If the creep does not have the container id, find it in the source
+    if (container == undefined){
       for (let i in base.sources){
         if (base.sources[i].id == creep.memory.source){
-          container = Game.getObjectById(base.sources[i].container);
+          creep.memory.container = base.sources[i].container;
+          break
         }
       }
-      if (container != undefined && container.store.energy > 0){
-        if (creep.withdraw(container, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE){
-          creep.moveTo(container);
-          return
-        }
-      }
+      container = Game.getObjectById(creep.memory.container);
+    }
 
-      if (creep.harvest(source) == ERR_NOT_IN_RANGE){
-        creep.moveTo(source);
+    // If the container exists and has energy, get energy from the container
+    if (container != undefined && container.store.energy > 0){
+      if (creep.withdraw(container, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE){
+        creep.moveTo(container);
       }
       return
     }
 
-    let building = false;
-    if (creep.memory.target == undefined || Game.getObjectById(creep.memory.target).energy == Game.getObjectById(creep.memory.target).energyCapacity){
-      // Find all spawns and extensions that need energy
-      let extensions = _.filter(getObjectList(base.structures.extension).concat(getObjectList(base.structures.spawn)), function(ext){return ext.energy < ext.energyCapacity});
-      if (extensions.length == 0){
-        building = true;
-      }
-      else if (creep.pos.roomName != extensions[0].pos.roomName){
-        creep.moveTo(extensions[0]);
-        return
-      }
-      else{
-        let nearest = creep.pos.findClosestByRange(extensions);
-        creep.memory.target = nearest.id;
-      }
+    // If there is no container, harvest from the source
+    if (creep.harvest(source) == ERR_NOT_IN_RANGE){
+      creep.moveTo(source);
     }
+    return
+  },
 
-    let road = _.filter(creep.room.lookForAt(LOOK_STRUCTURES, creep.pos), function(struct){return struct.structureType == STRUCTURE_ROAD})[0];
-    if (road !== undefined && road.hits < road.hitsMax){
+  // Build and repair roads the creep is on
+  repairRoads: function(creep){
+    let road = _.find(creep.pos.lookFor(LOOK_STRUCTURES), struct => struct.structureType == STRUCTURE_ROAD)
+    if (road == undefined){
+      road = _.find(creep.pos.lookFor(LOOK_CONSTRUCTION_SITES), struct => struct.structureType == STRUCTURE_ROAD)
+      if (road != undefined){
+        creep.build(road);
+        return true;
+      }
+      return false;
+    }
+    if (road.hits < road.hitsMax){
       creep.repair(road);
+      return false;
     }
-
-    if (building == false){
-
-      let target = Game.getObjectById(creep.memory.target);
-      if (creep.transfer(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE){
-        creep.moveTo(target);
-        return
-      }
-    }
-
-    if (building == true){
-      let sites = _.filter(getObjectList(base.structures.constructionSites), function(site){return site.roomName == creep.roomName && site.structureType != STRUCTURE_ROAD});
-      if (sites.length == 0){
-        creep.moveTo(Game.getObjectById(base.structures.constructionSites[0]));
-      }
-      else{
-        let nearest = creep.pos.findClosestByRange(sites);
-        if (creep.build(nearest) == ERR_NOT_IN_RANGE){
-          creep.moveTo(nearest);
-        }
-      }
-    }
-
-  }
+  },
 
 };

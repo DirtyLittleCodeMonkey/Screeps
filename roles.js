@@ -7,5 +7,7 @@ module.exports = {
   build: require('role.build'),
   guard: require('role.guard'),
   claim: require('role.claim'),
-  settler: require('role.settler')
+  settler: require('role.settler'),
+  gopher: require('role.gopher'),
+  rat: require('role.rat'),
 };

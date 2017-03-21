@@ -1,5 +1,6 @@
 const baseHandler = require('baseHandler');
-const roles = require('roles');
+const creepHandler = require('creepHandler');
+const screepsplus = require('screepsplus');
 // Global require
 require('require');
 
@@ -19,10 +20,12 @@ profiler.enable();
 
 module.exports.loop = function(){
   profiler.wrap(function() {
+
+
       if (Memory.cpu == undefined){
         Memory.cpu = {average: 0, total: 0, ticks: 0,};
       }
-      console.log('Tick ' + Game.time + ' | CPU average ' + Memory.cpu.average);
+      console.log('Tick ' + Game.time + ' | CPU average ' + Memory.cpu.average + ' | Bucket ' + Game.cpu.bucket);
       //Dead Creep Memory Cleanup
       for(let i in Memory.creeps) {
         if(!Game.creeps[i]) {
@@ -30,10 +33,16 @@ module.exports.loop = function(){
         }
       }
 
+      let statCpu = Game.cpu.getUsed()
+      // Collect stats for Graphana
+      screepsplus.collect_stats();
+      console.log('Stat collcetion CPU: ' + (Game.cpu.getUsed() - statCpu));
+
       // If memory structure does not exist, reset with strucutre present
       if (Memory.Empire == undefined){
         initMemory();
       }
+
 
       // Check if all owned rooms have a base
       for (let i in Game.rooms){
@@ -50,40 +59,20 @@ module.exports.loop = function(){
         }
       }
 
-      // Run creep roles
-      for (let i in Game.creeps){
-        try{
-          let creep = Game.creeps[i];
-          let base = Memory.Empire.bases[creep.memory.base];
 
-          // Check if the creep is under attack
-          if (creep.memory.hitsLastTick == undefined){
-            creep.memory.hitsLastTick = creep.hits;
-          }
-          else if (creep.memory.hitsLastTick > creep.hits){
-            if (base.rooms[creep.pos.roomName] != undefined){
-              base.rooms[creep.pos.roomName].underAttack = true;
-            }
-          }
-
-          // Execute creep role
-          if (creep.memory.role == undefined){
-            creep.suicide()
-            console.log('ERROR CREEEP HAS RO ROLE ' + creep.name + ' ' + creep.room);
-          }
-          roles[creep.memory.role].run(creep);
-          if (base.creeps[creep.memory.role] == undefined){
-            base.creeps[creep.memory.role] = [];
-          }
-          base.creeps[creep.memory.role].push(creep.name);
-        }
-        catch (e){
-          console.log('ERROR IN CREEP ROLE ' + i + '\n' + e + '\n' + e.stack);
-        }
-      }
+      // Creep roles
+      let preCPU = Game.cpu.getUsed()
+      creepHandler.run();
+      let postCPU = Game.cpu.getUsed()
+      console.log('Total Creep CPU: ' + (postCPU - preCPU));
 
       // Run the base handler for each base
+
+      preCPU = postCPU
       for (let i in Memory.Empire.bases){
+        if (Game.cpu.bucket < 8000){
+          break
+        }
         try{
           baseHandler.run(Memory.Empire.bases[i]);
         }
@@ -91,11 +80,17 @@ module.exports.loop = function(){
           console.log('ERROR IN BASE ' + i + '\n' + e + '\n' + e.stack);
         }
       }
+      postCPU = Game.cpu.getUsed()
+      console.log('Total Base CPU: ' + (postCPU - preCPU));
 
       // Update CPU average info
+      if (Game.time % 1000 == 0){
+        resetCpuAverage()
+      }
       Memory.cpu.total += Game.cpu.getUsed();
       Memory.cpu.ticks += 1;
       Memory.cpu.average = Memory.cpu.total / Memory.cpu.ticks;
+      console.log('Total CPU Used: ' + Game.cpu.getUsed());
   });
 };
 

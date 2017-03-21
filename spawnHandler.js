@@ -8,20 +8,24 @@ module.exports = {
       base.counter = 0;
     }
 
+    let report = false;
+
+
     //Select the first availible spawn in the base (Magic?)
-    let spawnId = _.first(_.filter(base.structures.spawn, s => Game.getObjectById(s).structureType == STRUCTURE_SPAWN && !Game.getObjectById(s).spawning));
-    if (spawnId == undefined){
+    let spawnId = _.first(_.filter(base.structures.spawn, s => Game.getObjectById(s).spawning == undefined));
+    let spawn = Game.getObjectById(spawnId);
+    if (spawn == undefined){
       return
     }
-    let spawn = Game.getObjectById(spawnId);
     //end magic
 
 
     // Guards
     if (base.level > 1){
       for (let i in base.rooms){
-        if (base.rooms[i].underAttack == true){
+        if (base.rooms[i].underAttack == true && base.creeps.guard.length < 3){
           this.spawnGuard(base, spawn, i);
+          if (report){console.log(base.mainRoom + ' ' + spawn.name + ' Guard');}
           return
         }
       }
@@ -31,6 +35,9 @@ module.exports = {
     if (base.level == 1 || (base.creeps.harv.length == 0 && base.creeps.boot.length < 2*base.sources.length) || base.creeps.haul.length == 0){
       for (let i in base.sources){
         let source = base.sources[i];
+        if (source.isMineral == true){
+          continue
+        }
         for (let j in source.boots){
           if (Game.creeps[source.boots[j]] == undefined){
             source.boots.splice(j,1);
@@ -41,6 +48,7 @@ module.exports = {
           if (result != undefined){
             source.boots.push(result);
           }
+          if (report){console.log(base.mainRoom + ' ' + spawn.name + ' Boot');}
           return
         }
       }
@@ -62,6 +70,7 @@ module.exports = {
             if (result != undefined){
               source.boots.push(result);
             }
+            if (report){console.log(base.mainRoom + ' ' + spawn.name + ' Helper');}
             return
           }
         }
@@ -72,11 +81,15 @@ module.exports = {
     if (base.level > 1 && base.creeps.harv.length < base.sources.length){
       for (let i in base.sources){
         let source = base.sources[i];
+        if (Game.getObjectById(source.id) == undefined || Game.getObjectById(source.id).ticksToRegeneration > 0){
+          continue
+        }
         if (Game.creeps[source.harv] == undefined){
           let result = this.spawnHarv(base, spawn, base.sources[i].id);
           if (result != undefined){
             source.harv = result;
           }
+          if (report){console.log(base.mainRoom + ' ' + spawn.name + ' Harv');}
           return
         }
       }
@@ -104,9 +117,17 @@ module.exports = {
           if (result != undefined){
             source.hauls.push(result);
           }
+          if (report){console.log(base.mainRoom + ' ' + spawn.name + ' Haul');}
           return
         }
       }
+    }
+
+    // Gophers
+    if (base.structures.storage.length > 0 && base.creeps.gopher.length < 2){
+      this.spawnGopher(base, spawn);
+      if (report){console.log(base.mainRoom + ' ' + spawn.name + ' Gopher');}
+      return
     }
 
     //Scouts
@@ -122,6 +143,8 @@ module.exports = {
         }
         if (hasCreep == false){
           this.spawnScout(base, spawn, i);
+          if (report){console.log(base.mainRoom + ' ' + spawn.name + ' Scout');}
+          return
         }
       }
     }
@@ -142,6 +165,7 @@ module.exports = {
         }
         if (hasClaimer == false){
           this.spawnClaimer(base, spawn, i);
+          if (report){console.log(base.mainRoom + ' ' + spawn.name + ' Claimer');}
           return
         }
       }
@@ -150,19 +174,29 @@ module.exports = {
     // Settlers
     if (base.level >= 3 && base.settleRoom != undefined){
       this.spawnSettler(base, spawn, base.settleRoom);
+      if (report){console.log(base.mainRoom + ' ' + spawn.name + ' Settler');}
       return
     }
 
 
     //Upgraders
-    if ((base.level == 1 && base.creeps.upgr.length < 1 ) || (base.level > 1 && base.creeps.upgr.length < 2*base.sources.length && (base.creeps.boot.length >= 2*base.sources.length || (base.creeps.harv.length == base.sources.length && base.sources.length != 0)))){
+    if (base.creeps.upgr.length < 2){
       this.spawnUpgr(base, spawn);
+      if (report){console.log(base.mainRoom + ' ' + spawn.name + ' Upgrader');}
       return
     }
 
     // Builders
     if ((base.structures.constructionSites.length > 0 || base.structures.repairTargets.length > 0) && base.creeps.build.length < 2){
       this.spawnBuild(base, spawn);
+      if (report){console.log(base.mainRoom + ' ' + spawn.name + ' Builder');}
+      return
+    }
+
+    // Lab Rats
+    if (base.structures.terminal.length > 0 && base.creeps.rat.length == 0){
+      this.spawnRat(base, spawn);
+      if (report){console.log(base.mainRoom + ' ' + spawn.name + ' Rat');}
       return
     }
 
@@ -176,6 +210,9 @@ module.exports = {
       base.counter ++;
       base.creeps.boot.push(result);
       return result;
+    }
+    else if (result == -10){
+      console.log('ERROR SPAWNING ' + base.mainRoom + ' ' + spawn.name + ' Boot');
     }
   },
 
@@ -192,6 +229,9 @@ module.exports = {
       base.creeps.harv.push(result);
       return result;
     }
+    else if (result == -10){
+      console.log('ERROR SPAWNING ' + base.mainRoom + ' ' + spawn.name + ' Harv');
+    }
   },
 
   spawnHaul: function(base, spawn, source, carryDeficite){
@@ -203,7 +243,7 @@ module.exports = {
         totalCARRY ++;
       }
     }
-    while (getBodyCost(haulBody.concat(haulAddition)) < spawn.room.energyAvailable && carryDeficite > totalCARRY){
+    while (getBodyCost(haulBody.concat(haulAddition)) <= spawn.room.energyAvailable && carryDeficite > totalCARRY && haulBody.concat(haulAddition).length <= 50){
       haulBody = haulBody.concat(haulAddition);
       totalCARRY = 0;
       for (let i in haulBody){
@@ -218,12 +258,15 @@ module.exports = {
       base.creeps.haul.push(result);
       return result;
     }
+    else if (result == -10){
+      console.log('ERROR SPAWNING ' + base.mainRoom + ' ' + spawn.name + ' Haul');
+    }
   },
 
   spawnUpgr: function(base, spawn){
     let upgrBody = bodies.upgrBase;
     let upgrAddition = bodies.upgrAddition;
-    while (getBodyCost(upgrBody.concat(upgrAddition)) <= spawn.room.energyAvailable){
+    while (getBodyCost(upgrBody.concat(upgrAddition)) <= spawn.room.energyAvailable && upgrBody.concat(upgrAddition).length <= 50){
       upgrBody = upgrBody.concat(upgrAddition);
     }
     let result = spawn.createCreep(upgrBody, 'Upgr ' + base.mainRoom + ' ' + base.counter, {role: 'upgr', base: base.mainRoom});
@@ -231,6 +274,9 @@ module.exports = {
       base.counter ++;
       base.creeps.upgr.push(result);
       return result;
+    }
+    else if (result == -10){
+      console.log('ERROR SPAWNING ' + base.mainRoom + ' ' + spawn.name + ' Upgr');
     }
   },
 
@@ -241,12 +287,15 @@ module.exports = {
       base.creeps.scout.push(result);
       return result;
     }
+    else if (result == -10){
+      console.log('ERROR SPAWNING ' + base.mainRoom + ' ' + spawn.name + ' Scout');
+    }
   },
 
   spawnBuild: function(base, spawn){
     let buildBody = bodies.buildBase;
     let buildAddition = bodies.buildAddition;
-    while (getBodyCost(buildBody.concat(buildAddition)) < spawn.room.energyAvailable){
+    while (getBodyCost(buildBody.concat(buildAddition)) <= spawn.room.energyAvailable && buildBody.concat(buildAddition).length <= 50){
       buildBody = buildBody.concat(buildAddition);
     }
     let result = spawn.createCreep(buildBody, 'Build ' + base.mainRoom + ' ' + base.counter, {role: 'build', base: base.mainRoom});
@@ -254,6 +303,9 @@ module.exports = {
       base.counter ++;
       base.creeps.build.push(result);
       return result;
+    }
+    else if (result == -10){
+      console.log('ERROR SPAWNING ' + base.mainRoom + ' ' + spawn.name + ' Build');
     }
   },
 
@@ -265,7 +317,7 @@ module.exports = {
       guardBase.push(HEAL);
       containsHeal = true;
     }
-    while (getBodyCost(guardBase.concat(guardAddition)) < spawn.room.energyAvailable){
+    while (getBodyCost(guardBase.concat(guardAddition)) < spawn.room.energyAvailable && guardBase.concat(guardAddition).length <= 50){
       guardBase = guardBase.concat(guardAddition);
     }
     if (containsHeal == true){
@@ -278,11 +330,14 @@ module.exports = {
       base.creeps.guard.push(result);
       return result;
     }
+    else if (result == -10){
+      console.log('ERROR SPAWNING ' + base.mainRoom + ' ' + spawn.name + ' Guard');
+    }
   },
 
   spawnClaimer: function(base, spawn, room){
     let claimerBody = [MOVE, CLAIM];
-    while (getBodyCost(claimerBody.concat([MOVE, CLAIM])) < spawn.room.energyAvailable){
+    if (getBodyCost(claimerBody.concat([MOVE, CLAIM])) <= spawn.room.energyAvailable){
       claimerBody = claimerBody.concat([MOVE, CLAIM]);
     }
     let result = spawn.createCreep(claimerBody, 'Claim ' + base.mainRoom + ' ' + base.counter, {role: 'claim', base: base.mainRoom, room: room});
@@ -290,6 +345,9 @@ module.exports = {
       base.counter ++;
       base.creeps.claim.push(result);
       return result;
+    }
+    else if (result == -10){
+      console.log('ERROR SPAWNING ' + base.mainRoom + ' ' + spawn.name + ' Claim');
     }
   },
 
@@ -300,6 +358,43 @@ module.exports = {
       base.creeps.settler.push(result);
       base.settleRoom = undefined
       return result;
+    }
+    else if (result == -10){
+      console.log('ERROR SPAWNING ' + base.mainRoom + ' ' + spawn.name + ' Settler');
+    }
+  },
+
+  spawnGopher: function(base, spawn){
+    let gopherBody = bodies.gopherBase;
+    let addition = bodies.gopherAddition;
+    while (getBodyCost(gopherBody) + getBodyCost(addition) <= spawn.room.energyAvailable && gopherBody.concat(addition).length <= 50){
+      gopherBody = gopherBody.concat(addition);
+    }
+    let result = spawn.createCreep(gopherBody, 'Gopher ' + base.mainRoom + ' ' + base.counter, {role: 'gopher', base: base.mainRoom});
+    if (!this.ERRORS.includes(result)){
+      base.counter ++;
+      base.creeps.gopher.push(result);
+      return result;
+    }
+    else if (result == -10){
+      console.log('ERROR SPAWNING ' + base.mainRoom + ' ' + spawn.name + ' Gopher');
+    }
+  },
+
+  spawnRat: function(base, spawn){
+    let ratBody = bodies.gopherBase;
+    let addition = bodies.gopherAddition;
+    while (getBodyCost(ratBody.concat(addition)) <= spawn.room.energyAvailable && ratBody.concat(addition).length <= 50){
+      ratBody = ratBody.concat(addition);
+    }
+    let result = spawn.createCreep(ratBody, 'Rat ' + base.mainRoom + ' ' + base.counter, {role: 'rat', base: base.mainRoom});
+    if (!this.ERRORS.includes(result)){
+      base.counter ++;
+      base.creeps.rat.push(result);
+      return result;
+    }
+    else if (result == -10){
+      console.log('ERROR SPAWNING ' + base.mainRoom + ' ' + spawn.name + ' Rat');
     }
   }
 

@@ -19,4 +19,7 @@ module.exports = {
   guardBase: [MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK],
   guardAddition: [MOVE, ATTACK],
 
+  gopherBase: [MOVE, CARRY, CARRY],
+  gopherAddition: [MOVE, CARRY, CARRY],
+
 };

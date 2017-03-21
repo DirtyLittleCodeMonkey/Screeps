@@ -13,6 +13,12 @@ module.exports = {
         }
       }
     }
+    // build Extractor
+    if (base.level > 5 && base.structures.extractor.length == 0){
+      let mainRoom = Game.rooms[base.mainRoom]
+      let mineral = mainRoom.find(FIND_MINERALS)[0];
+      mainRoom.createConstructionSite(mineral.pos, STRUCTURE_EXTRACTOR);
+    }
   },
 
   getRoomMap: function(base){
@@ -127,25 +133,43 @@ module.exports = {
   },
 
   makeRoads: function(base){
-    let spawn = Game.getObjectById(base.structures.spawn[0]);
-    let controller = spawn.room.controller;
-    for (let i in base.sources){
-      if (base.sources[i].roadBuilt == false && Game.time % 50 != 0){
-        continue
-      }
-      let source = Game.getObjectById(base.sources[i].id)
-      if (source == undefined){
-        continue;
-      }
-      let path = findPath(spawn.pos, source.pos);
-      if (RoomPosition.checkPath(path) == false){
-        base.sources[i].roadBuilt = true;
-      }
+    // Init path memory
+    if (base.building.paths == undefined){
+      base.building.paths = [];
     }
-    // controller
-    let controllerPath = findPath(spawn.pos, controller.pos)
-    RoomPosition.checkPath(controllerPath);
-    //RoomVisual.drawPath(paths[i]);
+    // Recalc paths every 50 ticks
+    if (Game.time % 50 == 0){
+      base.building.paths = [];
+      let spawn = Game.getObjectById(base.structures.spawn[0]);
+      let storage = Game.getObjectById(base.structures.storage[0]);
+      let controller = spawn.room.controller;
+
+      // Sources
+      for (let i in base.sources){
+        let source = Game.getObjectById(base.sources[i].id)
+        if (source == undefined){
+          continue;
+        }
+
+        let path = {};
+        if (storage == undefined){
+          path = findPath(spawn.pos, source.pos);
+        }
+        else{
+          path = findPath(storage.pos, source.pos);
+        }
+        base.building.paths.push(path);
+      }
+      // Controller
+      let controllerPath = findPath(spawn.pos, controller.pos)
+      base.building.paths.push(controllerPath);
+    }
+
+    // Check paths for each road
+    for (let i in base.building.paths){
+      RoomPosition.checkPath(base.building.paths[i])
+      //RoomVisual.drawPath(base.building.paths)[i];
+    }
   },
 
   blueprints: {
